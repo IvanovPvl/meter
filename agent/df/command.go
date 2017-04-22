@@ -1,15 +1,64 @@
+// Package df run `df` command.
 package df
 
-import "os/exec"
+import (
+	"os/exec"
+	"strconv"
+	"strings"
+)
 
-type DfResult struct {
+// Result represents the result of `df` command execution.
+type Result struct {
 	Filesystem string
-	Blocks     uint
-	Used       uint
-	Available  uint
+	Blocks     uint64
+	Used       uint64
+	Available  uint64
+	Use        uint64
+	MountedOn  string
 }
 
-func Exec() (string, error) {
+// Exec exec `df` command.
+func Exec() ([]Result, error) {
 	out, err := exec.Command("df").Output()
-	return string(out), err
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(out), "\n")
+
+	var results []Result
+	for _, line := range lines[1 : len(lines)-1] {
+		values := strings.Fields(line)
+		blocks, err := strconv.ParseUint(values[1], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		used, err := strconv.ParseUint(values[2], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		available, err := strconv.ParseUint(values[3], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		use, err := strconv.ParseUint(strings.Replace(values[4], "%", "", 1), 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		result := Result{
+			Filesystem: values[0],
+			Blocks:     blocks,
+			Used:       used,
+			Available:  available,
+			Use:        use,
+			MountedOn:  values[5],
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
 }
