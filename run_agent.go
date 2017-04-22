@@ -1,7 +1,9 @@
 package main
 
-import "github.com/ivanovpvl/meter/agent/server"
+import (
+	"github.com/ivanovpvl/meter/agent/server"
+)
 
-func main()  {
+func main() {
 	server.Run()
 }

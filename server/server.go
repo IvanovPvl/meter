@@ -1,14 +1,17 @@
+// Package server
 package server
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"sync"
 
-	"gopkg.in/yaml.v2"
 	"github.com/ivanovpvl/meter/agent/df"
+	"gopkg.in/yaml.v2"
 )
 
 type config struct {
@@ -27,6 +30,10 @@ type hostResponse struct {
 }
 
 var hosts []string
+
+func init() {
+	log.SetOutput(os.Stdout)
+}
 
 func parseConfig() (*config, error) {
 	data, err := ioutil.ReadFile("config.yml")
@@ -49,10 +56,18 @@ func dfHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, host := range hosts {
 		go func(host string) {
-			resp, _ := http.Get(host)
+			resp, err := http.Get(host)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				log.Println(host, err)
+				waitGroup.Done()
+				return
+			}
+
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				// TODO: handle error
+				log.Println(host, err)
+				waitGroup.Done()
+				return
 			}
 
 			result := transfer{host, body}
@@ -75,7 +90,8 @@ func processResults(results chan transfer, w http.ResponseWriter) {
 		dfRes := []df.Result{}
 		err := json.Unmarshal(result.Data, &dfRes)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(result.Host, err)
+			continue
 		}
 
 		hostResp := hostResponse{result.Host, dfRes}
@@ -84,7 +100,16 @@ func processResults(results chan transfer, w http.ResponseWriter) {
 
 	resp, err := json.Marshal(data)
 	if err != nil {
-		// TODO
+		log.Println(err)
+		errMap := make(map[string]error)
+		errMap["message"] = err
+		errResp, e := json.Marshal(errMap)
+		if e != nil {
+			log.Println(e)
+			return
+		}
+
+		w.Write(errResp)
 	}
 
 	w.Write(resp)
@@ -94,11 +119,13 @@ func processResults(results chan transfer, w http.ResponseWriter) {
 func Run() {
 	cnf, err := parseConfig()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalln(err)
 	}
-	addr := fmt.Sprintf(":%d", cnf.Port)
 
+	addr := fmt.Sprintf(":%d", cnf.Port)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/df", dfHandler)
+
+	log.Printf("Server running on %d port.\n", cnf.Port)
 	http.ListenAndServe(addr, mux)
 }
