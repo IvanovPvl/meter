@@ -9,12 +9,12 @@ import (
 
 // Result represents the result of `df` command execution.
 type Result struct {
-	Filesystem string
-	Blocks     uint64
-	Used       uint64
-	Available  uint64
-	Use        uint64
-	MountedOn  string
+	Filesystem string `json:"filesystem"`
+	Blocks     uint64 `json:"blocks"`
+	Used       uint64 `json:"used"`
+	Available  uint64 `json:"available"`
+	Use        uint64 `json:"use"`
+	MountedOn  string `json:"mounted_on"`
 }
 
 // Exec exec `df` command.

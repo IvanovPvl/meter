@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"github.com/ivanovpvl/meter/agent/df"
+	"github.com/ivanovpvl/meter/agent/server"
 )
 
 func main() {
-	res, _ := df.Exec()
-	fmt.Println(res)
+	server.Start()
 }
