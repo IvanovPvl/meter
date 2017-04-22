@@ -26,8 +26,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-// Start server
-func Start() {
+// Run server
+func Run() {
 	port := flag.Int("port", defaultPort, "Port for listening")
 	flag.Parse()
 
